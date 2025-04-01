@@ -106,15 +106,27 @@ jobs:
             oci-repository: ocm-gear/delivery-service
             build-ctx-artefact: distribution-packages
             untar-build-ctx-artefact: distribution-packages.tar.gz
-            ocm-labels: |
-              name: gardener.cloud/cve-categorisation
-              value:
-                network_exposure: public
-                authentication_enforced: true
-                user_interaction: end-user
-                confidentiality_requirement: high
-                integrity_requirement: high
-                availability_requirement: high
+          - name: extensions
+            dockerfile: Dockerfile.extensions
+            oci-repository: ocm-gear/extensions
+            build-ctx-artefact: distribution-packages
+            untar-build-ctx-artefact: distribution-packages.tar.gz
+          - name: extensions-cache-manager
+            dockerfile: Dockerfile.extensions.cache-manager
+            oci-repository: ocm-gear/extension-cache-manager
+            build-ctx-artefact: distribution-packages
+            untar-build-ctx-artefact: distribution-packages.tar.gz
+          - name: extensions-clamav
+            dockerfile: Dockerfile.extensions.clamav
+            oci-repository: ocm-gear/extension-clamav
+            build-ctx-artefact: distribution-packages
+            untar-build-ctx-artefact: distribution-packages.tar.gz
+          - name: extensions-crypto
+            dockerfile: Dockerfile.extensions.crypto
+            oci-repository: ocm-gear/extension-crypto
+            build-ctx-artefact: distribution-packages
+            untar-build-ctx-artefact: distribution-packages.tar.gz
+
     with:
       name: ${{ matrix.args.name }}
       version: ${{ needs.version.outputs.version }}
@@ -124,3 +136,12 @@ jobs:
       dockerfile: ${{ matrix.args.dockerfile }}
       build-ctx-artefact: ${{ matrix.args.build-ctx-artefact }}
       untar-build-ctx-artefact: ${{ matrix.args.untar-build-ctx-artefact }}
+      ocm-labels: |
+        name: gardener.cloud/cve-categorisation
+        value:
+          network_exposure: public
+          authentication_enforced: true
+          user_interaction: end-user
+          confidentiality_requirement: high
+          integrity_requirement: high
+          availability_requirement: high
