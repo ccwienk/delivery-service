@@ -1,0 +1,125 @@
+name: Build and Test
+
+on:
+  workflow_call:
+    inputs:
+      mode:
+        required: true
+        type: string
+        description:
+          mode as expected by `cc-util/.github/actions/params` action.
+          either of
+          - snapshot
+          - release
+      version-prerelease:
+        required: true
+        type: string
+        description: |
+          the prerelease-version to set for effective version (passed to version-action)
+
+          helpful values:
+          - empty string: finalise
+          - ${commit_digest} -> head-commit's digest
+          - ${epoch} -> unix-expoch in seconds
+      version-commit-message:
+        required: false
+        type: string
+        default: "build ${version}"
+    outputs:
+      base-component-descriptor:
+        value: ${{ jobs.base-component-descriptor.outputs.component-descriptor }}
+
+jobs:
+  params:
+    uses: gardener/cc-utils/.github/workflows/params.yaml@master
+    with:
+      mode: ${{ inputs.mode }}
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      commit-objects: ${{ steps.version.outputs.commit-objects }}
+      commit-digest: ${{ steps.version.output.commit-digest }}
+    steps:
+    - uses: actions/checkout@v4
+    - uses: gardener/cc-utils/.github/actions/version@master
+      id: version
+      with:
+        commit-message: ${{ inputs.version-commit-message }}
+        prerelease: ${{ inputs.version-prerelease }}
+
+  base-component-descriptor:
+    needs:
+      - version
+      - params
+    uses: gardener/cc-utils/.github/workflows/base-component-descriptor.yaml@master
+    with:
+      version: ${{ needs.version.outputs.version }}
+      ocm-repo: ${{ needs.params.outputs.ocm-repository }}
+      commit-digest: ${{ needs.version.outputs.version-commit-digest }}
+      labels: |
+        name: cloud.gardener.cnudie/responsibles
+        value:
+          - type: githubTeam
+            teamname: open-component-model/odg-maintainers
+            github_hostname: github.com
+
+  packages:
+    runs-on: ubuntu-latest
+    needs:
+      - version
+    steps:
+      - name: install setuptools
+        run: |
+          pip3 install --root-user-action ignore \
+            setuptools
+      - uses: actions/checkout@v4
+      - name: create distribution packages
+        run: |
+          export out_dir=dist
+          .ci/build_python_packages
+
+          tar czf distribution-packages.tar.gz dist
+      - name: upload python-packages as artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: distribution-packages
+          path: distribution-packages.tar.gz
+
+  oci-images:
+    name: Build OCI-Images
+    needs:
+      - version
+      - packages # needed indirectly (python-packages artefact)
+      - params
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: gardener/cc-utils/.github/workflows/oci-ocm.yaml@master
+    strategy:
+      matrix:
+        args:
+          - name: delivery-service
+            dockerfile: Dockerfile.service
+            oci-repository: ocm-gear/delivery-service
+            build-ctx-artefact: distribution-packages
+            untar-build-ctx-artefact: distribution-packages.tar.gz
+            ocm-labels: |
+              name: gardener.cloud/cve-categorisation
+              value:
+                network_exposure: public
+                authentication_enforced: true
+                user_interaction: end-user
+                confidentiality_requirement: high
+                integrity_requirement: high
+                availability_requirement: high
+    with:
+      name: ${{ matrix.args.name }}
+      version: ${{ needs.version.outputs.version }}
+      oci-registry: ${{ needs.params.outputs.oci-registry }}
+      oci-repository: ${{ matrix.args.oci-repository }}
+      oci-platforms: 'linux/amd64'
+      dockerfile: ${{ matrix.dockerfile }}
+      build-ctx-artefact: ${{ matrix.args.build-ctx-artefact }}
+      untar-build-ctx-artefact: ${{ matrix.args.untar-build-ctx-artefact }}
