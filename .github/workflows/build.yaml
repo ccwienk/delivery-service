@@ -74,6 +74,7 @@ jobs:
           pip3 install --root-user-action ignore \
             setuptools
       - uses: actions/checkout@v4
+      - uses: gardener/cc-utils/.github/actions/install-gardener-gha-libs@master
       - name: create distribution packages
         run: |
           export out_dir=dist
