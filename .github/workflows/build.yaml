@@ -145,12 +145,13 @@ jobs:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: high
+          ctx: oci-images
 
   helmcharts:
     name: Build Helmcharts
     needs:
       - params
-      - base-component-descriptor
+      - oci-images
     permissions:
       contents: read
       packages: write
@@ -169,6 +170,11 @@ jobs:
                 attribute: image.tag
 
     steps:
+      - name: fetch-ocm-fragments
+        id: fetch-ocm
+        uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
+        with:
+          ctx: oci-images
       - uses: actions/checkout@v4
       - name: build-helmchart
         uses: gardener/cc-utils/.github/actions/helmchart@master
@@ -177,6 +183,6 @@ jobs:
           dir: ${{ matrix.args.dir }}
           oci-registry: ${{ needs.params.outputs.oci-registry }}
           oci-repository: ${{ matrix.args.repository }}
-          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
+          component-descriptor: ${{ steps.fetch-ocm.outputs.component-descriptor }}
           mappings: ${{ toJSON(matrix.args.mappings) }}
           gh-token: ${{ secrets.GITHUB_TOKEN }}
