@@ -136,6 +136,7 @@ jobs:
       dockerfile: ${{ matrix.args.dockerfile }}
       build-ctx-artefact: ${{ matrix.args.build-ctx-artefact }}
       untar-build-ctx-artefact: ${{ matrix.args.untar-build-ctx-artefact }}
+      ctx: oci-images
       ocm-labels: |
         name: gardener.cloud/cve-categorisation
         value:
@@ -145,7 +146,6 @@ jobs:
           confidentiality_requirement: high
           integrity_requirement: high
           availability_requirement: high
-          ctx: oci-images
 
   helmcharts:
     name: Build Helmcharts
