@@ -179,3 +179,4 @@ jobs:
           oci-repository: ${{ matrix.args.repository }}
           component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
           mappings: ${{ toJSON(matrix.args.mappings) }}
+          gh-token: ${{ secrets.GITHUB_TOKEN }}
