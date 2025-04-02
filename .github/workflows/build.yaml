@@ -151,6 +151,7 @@ jobs:
     name: Build Helmcharts
     needs:
       - params
+      - base-component-descriptor
       - oci-images
     permissions:
       contents: read
@@ -174,6 +175,7 @@ jobs:
         id: fetch-ocm
         uses: gardener/cc-utils/.github/actions/merge-ocm-fragments@master
         with:
+          component-descriptor: ${{ needs.base-component-descriptor.outputs.component-descriptor }}
           ctx: oci-images
       - uses: actions/checkout@v4
       - name: build-helmchart
